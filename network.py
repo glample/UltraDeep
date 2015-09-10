@@ -56,7 +56,7 @@ class RNN(object):
         Input: matrix of dimension (sequence_length, input_dim)
         Output: vector of dimension (output_dim)
     With batches:
-        Input: tensor3 of dimension (batch_size, sequence_length, input_dim)
+        Input: tensor3 of dimension (sequence_length, batch_size, input_dim)
         Output: matrix of dimension (batch_size, output_dim)
     """
 
@@ -124,7 +124,7 @@ class LSTM(object):
         Input: matrix of dimension (sequence_length, input_dim)
         Output: vector of dimension (output_dim)
     With batches:
-        Input: tensor3 of dimension (batch_size, sequence_length, input_dim)
+        Input: tensor3 of dimension (sequence_length, batch_size, input_dim)
         Output: matrix of dimension (batch_size, output_dim)
     """
 
