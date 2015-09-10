@@ -1,0 +1,96 @@
+import numpy as np
+import theano
+import theano.tensor as T
+import utils
+from utils import *
+
+floatX = theano.config.floatX
+device = theano.config.device
+
+
+class Hidden_layer(object):
+    """
+    Hidden layer with or without bias.
+    Input: tensor of dimension (dim*, input_dim)
+    Output: tensor of dimension (dim*, output_dim)
+    """
+
+    def __init__(self, input_dim, output_dim, bias=True, activation='tanh', name='hidden_layer'):
+
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.bias=bias
+        self.name = name
+        if activation == 'tanh':
+            self.activation = T.tanh
+        elif activation == 'sigmoid':
+            self.activation = T.nnet.sigmoid
+        elif activation == 'softmax':
+            self.activation = T.nnet.softmax
+        else:
+            raise Exception("Unknown activation function: " % activation)
+
+        # Domain range for weights initialization
+        drange = get_drange((input_dim, output_dim), activation)
+
+        # Initialize weights and bias
+        self.weights = create_shared(drange * random_weights((input_dim, output_dim)), name + '_weights')
+        self.bias = create_shared(np.zeros((output_dim,)), name + '_bias')
+
+        # Define parameters
+        if self.bias:
+            self.params = [self.weights, self.bias]
+        else:
+            self.params = [self.weights]
+
+
+    def link(self, input):
+        """
+        The input has to be a tensor with the right most dimension equal to input_dim.
+        """
+        self.input = input
+        self.linear_output = T.dot(self.input, self.weights)
+        if self.bias:
+            self.linear_output = self.linear_output + self.bias
+        self.output = self.activation(self.linear_output)
+        return self.output
+
+
+class Embedding_layer(object):
+    """
+    Embedding layer: indexes of the words are replaced with their embeddings representations.
+    Input: tensor of dimension (dim*) with values in range(0, input_dim)
+    Output: tensor of dimension (dim*, output_dim)
+    """
+
+    def __init__(self, input_dim, output_dim, name='embedding_layer'):
+        """
+        Typically, input_dim is the vocabulary size,
+        and output_dim the embedding dimension.
+        """
+
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.name = name
+
+        # Randomly generate weights
+        self.embeddings = create_shared(random_weights((input_dim, output_dim)), self.name + '_embeddings')
+
+        # Define parameters
+        self.params = [self.embeddings]
+
+
+    def link(self, input):
+        """
+        Return the embeddings of the given indexes.
+        Input: tensor of shape (batch_size, sentence_length)
+        Output: tensor of shape (batch_size, sentence_length, output_dim)
+        """
+        self.input = input
+        #concat_indexes = self.input.flatten()
+        # __TODO__:check that
+        #if device == 'cpu':
+        #    indexed_rows = theano.sparse_grad(self.weights[concatenated_input])
+        #else:
+        self.output = self.embeddings[self.input]
+        return self.output
