@@ -56,7 +56,7 @@ def adagrad(cost, params, lr=1.0, epsilon=1e-6):
     for param, gradient, gsum in zip(params, gradients, gsums):
         new_gsum = gsum + gradient ** 2.
         updates.append((gsum, new_gsum))
-        updates.append((param, param - lr * gradient / ( T.sqrt(new_gsum + epsilon) )))
+        updates.append((param, param - lr * gradient / (T.sqrt(new_gsum + epsilon))))
     return updates
 
 
@@ -68,8 +68,18 @@ def adadelta(cost, params, rho=0.95, epsilon=1e-6):
     epsilon = theano.shared(np.float32(epsilon).astype(floatX))
 
     gradients = T.grad(cost, params)
-    accu_gradients = [theano.shared(np.zeros_like(param.get_value(borrow=True)).astype(floatX)) for param in params]
-    accu_deltas = [theano.shared(np.zeros_like(param.get_value(borrow=True)).astype(floatX)) for param in params]
+    accu_gradients = [
+        theano.shared(
+            np.zeros_like(param.get_value(borrow=True)).astype(floatX)
+        )
+        for param in params
+    ]
+    accu_deltas = [
+        theano.shared(
+            np.zeros_like(param.get_value(borrow=True)).astype(floatX)
+        )
+        for param in params
+    ]
 
     updates = []
     for param, gradient, accu_gradient, accu_delta in zip(params, gradients, accu_gradients, accu_deltas):

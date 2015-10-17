@@ -1,7 +1,7 @@
 import numpy as np
 import theano
 import theano.tensor as T
-from utils import *
+from utils import create_shared, random_weights
 from theano.tensor.nnet import conv
 import pooling
 
@@ -10,7 +10,7 @@ floatX = theano.config.floatX
 device = theano.config.device
 
 
-class Conv1D_layer(object):
+class Conv1DLayer(object):
 
     def __init__(self, nb_filters, stack_size, filter_height, wide, emb_dim, name):
         """
@@ -32,8 +32,8 @@ class Conv1D_layer(object):
             np.random.normal(0, 0.05, size=self.filter_shape),
             dtype=theano.config.floatX
         )
-        self.filters = create_shared(filters_values, name + '_filters')
-        self.bias = create_shared(np.zeros((nb_filters, emb_dim)), name + '_bias')
+        self.filters = create_shared(filters_values, name + '__filters')
+        self.bias = create_shared(np.zeros((nb_filters, emb_dim)), name + '__bias')
 
         # parameters in the layer
         self.params = [self.filters, self.bias]
@@ -43,7 +43,7 @@ class Conv1D_layer(object):
         conv_list = []
         for i in range(self.emb_dim):
             conv_out = conv.conv2d(
-                input = self.input[:, :, :, i:i+1],
+                input=self.input[:, :, :, i:i + 1],
                 filters=self.filters[i],
                 border_mode=('full' if self.wide else 'valid')
             )
@@ -58,7 +58,7 @@ class Conv1D_layer(object):
         return self.output
 
 
-class Conv2D_layer(object):
+class Conv2DLayer(object):
     """
     2D Convolutional neural layer.
     """
@@ -80,12 +80,12 @@ class Conv2D_layer(object):
         self.name = name
         self.filter_shape = (nb_filters, stack_size, filter_height, filter_width)
 
-        fan_in = stack_size * filter_height * filter_width      # number of inputs to each hidden unit
-        fan_out = ((nb_filters * filter_height * filter_width)) # each unit in the lower layer receives a gradient from
-        drange = np.sqrt(6. / (fan_in + fan_out))               # initialize filters with random values
+        fan_in = stack_size * filter_height * filter_width       # number of inputs to each hidden unit
+        fan_out = ((nb_filters * filter_height * filter_width))  # each unit in the lower layer receives a gradient from
+        drange = np.sqrt(6. / (fan_in + fan_out))                # initialize filters with random values
 
-        self.filters = create_shared(drange * random_weights(self.filter_shape), name + '_filters')
-        self.bias = create_shared(np.zeros((nb_filters,)), name + '_bias')
+        self.filters = create_shared(drange * random_weights(self.filter_shape), name + '__filters')
+        self.bias = create_shared(np.zeros((nb_filters,)), name + '__bias')
 
         # parameters in the layer
         self.params = [self.filters, self.bias]
@@ -113,7 +113,7 @@ class Conv2D_layer(object):
         return self.output
 
 
-class Conv1D_layer_kmax_pooling(object):
+class Conv1DLayerKMaxPooling(object):
     """
     1D Convolutional neural layer with k-max pooling.
     """
@@ -135,7 +135,14 @@ class Conv1D_layer_kmax_pooling(object):
         self.name = name
         self.k_max = None
 
-        self.conv1d_layer = Conv1D_layer(nb_filters, stack_size, filter_height, wide, emb_dim, name + "_conv1d_layer")
+        self.conv1d_layer = Conv1DLayer(
+            nb_filters,
+            stack_size,
+            filter_height,
+            wide,
+            emb_dim,
+            name + "__conv1d_layer"
+        )
 
         # parameters in the layer
         self.params = [self.conv1d_layer.filters, self.conv1d_layer.bias]
@@ -156,7 +163,7 @@ class Conv1D_layer_kmax_pooling(object):
         self.conv_out = self.conv1d_layer.conv_out
 
         # k-max pooling
-        k_max_layer = pooling.kmax_pooling_layer_1(self.k_max)
+        k_max_layer = pooling.KMaxPoolingLayer1(self.k_max)
         self.pooled_out = k_max_layer.link(self.conv_out)
 
         # bias + squash function
@@ -166,7 +173,7 @@ class Conv1D_layer_kmax_pooling(object):
         return self.output
 
 
-class Conv2D_layer_kmax_pooling(object):
+class Conv2DLayerKMaxPooling(object):
     """
     2D Convolutional neural layer with k-max pooling.
     """
@@ -188,7 +195,14 @@ class Conv2D_layer_kmax_pooling(object):
         self.name = name
         self.k_max = None
 
-        self.conv2d_layer = Conv2D_layer(nb_filters, stack_size, filter_height, filter_width, wide, name + "_conv2d_layer")
+        self.conv2d_layer = Conv2DLayer(
+            nb_filters,
+            stack_size,
+            filter_height,
+            filter_width,
+            wide,
+            name + "__conv2d_layer"
+        )
 
         # parameters in the layer
         self.params = [self.conv2d_layer.filters, self.conv2d_layer.bias]
@@ -209,7 +223,7 @@ class Conv2D_layer_kmax_pooling(object):
         self.conv_out = self.conv2d_layer.conv_out
 
         # k-max pooling
-        k_max_layer = pooling.kmax_pooling_layer_1(self.k_max)
+        k_max_layer = pooling.KMaxPoolingLayer1(self.k_max)
         self.pooled_out = k_max_layer.link(self.conv_out)
 
         # bias + squash function

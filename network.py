@@ -1,52 +1,10 @@
 import numpy as np
 import theano
 import theano.tensor as T
-import os
-import cPickle
-from utils import *
+from utils import create_shared, random_weights, get_drange
 
 floatX = theano.config.floatX
 device = theano.config.device
-
-
-class Structure(object):
-    """
-    Network structure. For easy saving and loading.
-    """
-    def __init__(self, name, dump_path='/home/guillaume/workspace/saved_models'):
-        self.name = name
-        self.dump_path = os.path.join(dump_path, name)
-        self.components = {}
-        if not os.path.exists(self.dump_path):
-            os.makedirs(self.dump_path)
-
-    def add_component(self, component):
-        if component.name in self.components:
-            raise Exception("%s is already a component of this network!" % component.name)
-        self.components[component.name] = component
-
-    def dump(self, message):
-        # Write components
-        for name, component in self.components.items():
-            for param in component.params:
-                param_path = os.path.join(self.dump_path, "%s__%s.pkl" % (name, param.name))
-                cPickle.dump(param.get_value(), open(param_path, 'w'))
-        # Write information
-        messages_path = os.path.join(self.dump_path, "messages.txt")
-        with open(messages_path, "a") as f:
-            f.write(message + "\n")
-        params_shapes_path = os.path.join(self.dump_path, "params_shapes.txt")
-        with open(params_shapes_path, "w") as f:
-            for name, component in self.components.items():
-                for param in component.params:
-                    f.write("%s__%s : %s\n" % (name, param.name, param.get_value().shape))
-
-    def load(self):
-        # Load components
-        for name, component in self.components.items():
-            for param in component.params:
-                param_path = os.path.join(self.dump_path, "%s__%s.pkl" % (name, param.name))
-                param.set_value(cPickle.load(open(param_path, 'r')))
 
 
 class RNN(object):
@@ -60,12 +18,10 @@ class RNN(object):
         Output: matrix of dimension (batch_size, output_dim)
     """
 
-    def __init__(self, input_dim, hidden_dim, activation=T.nnet.sigmoid, with_batch=True, name='RNN'):
+    def __init__(self, input_dim, hidden_dim, activation=T.nnet.sigmoid,
+                 with_batch=True, name='RNN'):
         """
         Initialize neural network.
-        The output layer is not defined here, and has to be added on the output of the RNN.
-        Indeed, we don't know what is the expected type of output we want to have (MSE,
-        binary, multiclass, etc.)
         """
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
@@ -78,12 +34,12 @@ class RNN(object):
         drange_h = get_drange((hidden_dim, hidden_dim), activation)
 
         # Randomly generate weights
-        self.w_x = create_shared(drange_x * random_weights((input_dim, hidden_dim)), name + '_w_x')
-        self.w_h = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '_w_h')
+        self.w_x = create_shared(drange_x * random_weights((input_dim, hidden_dim)), name + '__w_x')
+        self.w_h = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '__w_h')
 
         # Initialize the bias vector and h_0 to zero vectors
-        self.b_h = create_shared(np.zeros((hidden_dim,)), name + '_b_h')
-        self.h_0 = create_shared(np.zeros((hidden_dim,)), name + '_h_0')
+        self.b_h = create_shared(np.zeros((hidden_dim,)), name + '__b_h')
+        self.h_0 = create_shared(np.zeros((hidden_dim,)), name + '__h_0')
 
         # Define parameters
         self.params = [self.w_x, self.w_h, self.b_h, self.h_0]
@@ -131,9 +87,6 @@ class LSTM(object):
     def __init__(self, input_dim, hidden_dim, with_batch=True, name='LSTM'):
         """
         Initialize neural network.
-        The output layer is not defined here, and has to be added on the output of the RNN.
-        Indeed, we don't know what is the expected type of output we want to have (MSE,
-        binary, multiclass, etc.)
         """
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
@@ -145,31 +98,31 @@ class LSTM(object):
         drange_h = get_drange((hidden_dim, hidden_dim))
 
         # Input gate weights
-        self.w_xi = create_shared(drange_x * random_weights((input_dim, hidden_dim)), name + '_w_xi')
-        self.w_hi = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '_w_hi')
-        self.w_ci = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '_w_ci')
+        self.w_xi = create_shared(drange_x * random_weights((input_dim, hidden_dim)), name + '__w_xi')
+        self.w_hi = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '__w_hi')
+        self.w_ci = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '__w_ci')
 
         # Forget gate weights
-        self.w_xf = create_shared(drange_x * random_weights((input_dim, hidden_dim)), name + '_w_xf')
-        self.w_hf = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '_w_hf')
-        self.w_cf = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '_w_cf')
+        self.w_xf = create_shared(drange_x * random_weights((input_dim, hidden_dim)), name + '__w_xf')
+        self.w_hf = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '__w_hf')
+        self.w_cf = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '__w_cf')
 
         # Output gate weights
-        self.w_xo = create_shared(drange_x * random_weights((input_dim, hidden_dim)), name + '_w_xo')
-        self.w_ho = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '_w_ho')
-        self.w_co = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '_w_co')
+        self.w_xo = create_shared(drange_x * random_weights((input_dim, hidden_dim)), name + '__w_xo')
+        self.w_ho = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '__w_ho')
+        self.w_co = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '__w_co')
 
         # Cell weights
-        self.w_xc = create_shared(drange_x * random_weights((input_dim, hidden_dim)), name + '_w_xc')
-        self.w_hc = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '_w_hc')
+        self.w_xc = create_shared(drange_x * random_weights((input_dim, hidden_dim)), name + '__w_xc')
+        self.w_hc = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '__w_hc')
 
         # Initialize the bias vectors, c_0 and h_0 to zero vectors
-        self.b_i = create_shared(np.zeros((hidden_dim,)), name + '_b_i')
-        self.b_f = create_shared(np.zeros((hidden_dim,)), name + '_b_f')
-        self.b_c = create_shared(np.zeros((hidden_dim,)), name + '_b_c')
-        self.b_o = create_shared(np.zeros((hidden_dim,)), name + '_b_o')
-        self.c_0 = create_shared(np.zeros((hidden_dim,)), name + '_c_0')
-        self.h_0 = create_shared(np.zeros((hidden_dim,)), name + '_h_0')
+        self.b_i = create_shared(np.zeros((hidden_dim,)), name + '__b_i')
+        self.b_f = create_shared(np.zeros((hidden_dim,)), name + '__b_f')
+        self.b_c = create_shared(np.zeros((hidden_dim,)), name + '__b_c')
+        self.b_o = create_shared(np.zeros((hidden_dim,)), name + '__b_o')
+        self.c_0 = create_shared(np.zeros((hidden_dim,)), name + '__c_0')
+        self.h_0 = create_shared(np.zeros((hidden_dim,)), name + '__h_0')
 
         # Define parameters
         self.params = [self.w_xi, self.w_hi, self.w_ci,
