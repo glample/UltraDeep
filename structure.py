@@ -1,5 +1,7 @@
 import os
+import numpy as np
 import scipy.io
+from datetime import datetime
 
 
 class Structure(object):
@@ -8,6 +10,7 @@ class Structure(object):
     """
     def __init__(self, name, dump_path='/home/guillaume/workspace/saved_models'):
         self.name = name
+        self.start_time = datetime.now()
         self.dump_path = os.path.join(dump_path, name)
         self.components = {}
         if not os.path.exists(self.dump_path):
@@ -30,7 +33,11 @@ class Structure(object):
         # Write message
         messages_path = os.path.join(self.dump_path, "messages.txt")
         with open(messages_path, "a") as f:
-            f.write(message + "\n")
+            f.write("%s (%s) - %s\n" % (
+                str(datetime.now()),
+                str(datetime.now() - self.start_time),
+                message
+            ))
         # Write parameters shapes
         params_shapes_path = os.path.join(self.dump_path, "params_shapes.txt")
         with open(params_shapes_path, "w") as f:
@@ -45,18 +52,28 @@ class Structure(object):
             component_path = os.path.join(self.dump_path, "%s.mat" % (name))
             component_values = scipy.io.loadmat(component_path)
             for param in component.params:
-                param.set_value(component_values[param.name])
+                param.set_value(np.reshape(
+                    component_values[param.name],
+                    param.get_value().shape
+                ))
 
 
 class Sequential(object):
     """
     Create sequential networks.
     """
-    def __init__(self, modules=[]):
+    def __init__(self, *modules):
         """
         Initialize a sequential network.
         """
-        self.modules = modules
+        self.modules = [module for module in modules]
+
+    @property
+    def params(self):
+        """
+        Return the parameters of all objects in the sequence.
+        """
+        return sum([module.params for module in self.modules], [])
 
     def add_module(self, module):
         """
