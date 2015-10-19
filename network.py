@@ -190,25 +190,28 @@ class GRU(object):
         drange_x = get_drange((input_dim, hidden_dim))
         drange_h = get_drange((hidden_dim, hidden_dim))
 
-        # Update gate weights
+        # Update gate weights and bias
         self.w_z = create_shared(drange_x * random_weights((input_dim, hidden_dim)), name + '__w_z')
         self.u_z = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '__u_z')
+        self.b_z = create_shared(np.zeros((hidden_dim,)), name + '__b_z')
 
-        # Reset gate weights
+        # Reset gate weights and bias
         self.w_r = create_shared(drange_x * random_weights((input_dim, hidden_dim)), name + '__w_r')
         self.u_r = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '__u_r')
+        self.b_r = create_shared(np.zeros((hidden_dim,)), name + '__b_r')
 
-        # New memory content weights
-        self.w_n = create_shared(drange_x * random_weights((input_dim, hidden_dim)), name + '__w_n')
-        self.u_n = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '__u_n')
+        # New memory content weights and bias
+        self.w_c = create_shared(drange_x * random_weights((input_dim, hidden_dim)), name + '__w_c')
+        self.u_c = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '__u_c')
+        self.b_c = create_shared(np.zeros((hidden_dim,)), name + '__b_c')
 
         # Initialize the bias vector, h_0, to the zero vector
         self.h_0 = create_shared(np.zeros((hidden_dim,)), name + '__h_0')
 
         # Define parameters
-        self.params = [self.w_z, self.u_z,
-                       self.w_r, self.u_r,
-                       self.w_n, self.u_n,
+        self.params = [self.w_z, self.u_z, self.b_z,
+                       self.w_r, self.u_r, self.b_r,
+                       self.w_c, self.u_c, self.b_c,
                        self.h_0]
 
     def link(self, input):
@@ -218,10 +221,10 @@ class GRU(object):
         """
 
         def recurrence(x_t, h_tm1):
-            z_t = T.nnet.sigmoid(T.dot(x_t, self.w_z) + T.dot(h_tm1, self.u_z))
-            r_t = T.nnet.sigmoid(T.dot(x_t, self.w_r) + T.dot(h_tm1, self.u_r))
-            n_t = T.tanh(T.dot(x_t, self.w_n) + r_t * T.dot(h_tm1, self.u_n))
-            h_t = z_t * h_tm1 + (1 - z_t) * n_t
+            z_t = T.nnet.sigmoid(T.dot(x_t, self.w_z) + T.dot(h_tm1, self.u_z) + self.b_z)
+            r_t = T.nnet.sigmoid(T.dot(x_t, self.w_r) + T.dot(h_tm1, self.u_r) + self.b_r)
+            c_t = T.tanh(T.dot(x_t, self.w_c) + T.dot(r_t * h_tm1, self.u_c) + self.b_c)
+            h_t = (1 - z_t) * h_tm1 + z_t * c_t
             return h_t
 
         # If we used batches, we have to permute the first and second dimension.
