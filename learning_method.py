@@ -90,3 +90,33 @@ def adadelta(cost, params, rho=0.95, epsilon=1e-6):
         updates.append((accu_delta, new_accu_delta))
         updates.append((param, param + delta_x))
     return updates
+
+
+def adam(cost, params, lr=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8):
+    """
+    Adam. Based on http://arxiv.org/pdf/1412.6980v4.pdf
+    """
+    updates = []
+    gradients = T.grad(cost, params)
+
+    t = theano.shared(np.float32(1.).astype(floatX))
+
+    for param, gradient in zip(params, gradients):
+        value = param.get_value(borrow=True)
+        m_prev = theano.shared(np.zeros(value.shape, dtype=value.dtype),
+                               broadcastable=param.broadcastable)
+        v_prev = theano.shared(np.zeros(value.shape, dtype=value.dtype),
+                               broadcastable=param.broadcastable)
+
+        m = beta1 * m_prev + (1. - beta1) * gradient
+        v = beta2 * v_prev + (1. - beta2) * gradient ** 2.
+        m_hat = m / (1. - beta1 ** t)
+        v_hat = v / (1. - beta2 ** t)
+        theta = param - (lr * m_hat) / (T.sqrt(v_hat) + epsilon)
+
+        updates.append((m_prev, m))
+        updates.append((v_prev, v))
+        updates.append((param, theta))
+
+    updates.append((t, t + 1.))
+    return updates
