@@ -14,7 +14,7 @@ class HiddenLayer(object):
     Output: tensor of dimension (dim*, output_dim)
     """
 
-    def __init__(self, input_dim, output_dim, bias=True, activation='tanh',
+    def __init__(self, input_dim, output_dim, bias=True, activation='sigmoid',
                  name='hidden_layer'):
 
         self.input_dim = input_dim
