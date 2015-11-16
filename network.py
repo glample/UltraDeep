@@ -1,7 +1,7 @@
 import numpy as np
 import theano
 import theano.tensor as T
-from utils import create_shared, random_weights, get_drange
+from utils import create_shared, random_weights
 
 floatX = theano.config.floatX
 device = theano.config.device
@@ -29,13 +29,9 @@ class RNN(object):
         self.with_batch = with_batch
         self.name = name
 
-        # Domain range for weights initialization
-        drange_x = get_drange((input_dim, hidden_dim), activation)
-        drange_h = get_drange((hidden_dim, hidden_dim), activation)
-
         # Randomly generate weights
-        self.w_x = create_shared(drange_x * random_weights((input_dim, hidden_dim)), name + '__w_x')
-        self.w_h = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '__w_h')
+        self.w_x = create_shared(random_weights((input_dim, hidden_dim)), name + '__w_x')
+        self.w_h = create_shared(random_weights((hidden_dim, hidden_dim)), name + '__w_h')
 
         # Initialize the bias vector and h_0 to zero vectors
         self.b_h = create_shared(np.zeros((hidden_dim,)), name + '__b_h')
@@ -93,28 +89,24 @@ class LSTM(object):
         self.with_batch = with_batch
         self.name = name
 
-        # Domain range for weights initialization
-        drange_x = get_drange((input_dim, hidden_dim))
-        drange_h = get_drange((hidden_dim, hidden_dim))
-
         # Input gate weights
-        self.w_xi = create_shared(drange_x * random_weights((input_dim, hidden_dim)), name + '__w_xi')
-        self.w_hi = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '__w_hi')
-        self.w_ci = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '__w_ci')
+        self.w_xi = create_shared(random_weights((input_dim, hidden_dim)), name + '__w_xi')
+        self.w_hi = create_shared(random_weights((hidden_dim, hidden_dim)), name + '__w_hi')
+        self.w_ci = create_shared(random_weights((hidden_dim, hidden_dim)), name + '__w_ci')
 
         # Forget gate weights
-        self.w_xf = create_shared(drange_x * random_weights((input_dim, hidden_dim)), name + '__w_xf')
-        self.w_hf = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '__w_hf')
-        self.w_cf = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '__w_cf')
+        self.w_xf = create_shared(random_weights((input_dim, hidden_dim)), name + '__w_xf')
+        self.w_hf = create_shared(random_weights((hidden_dim, hidden_dim)), name + '__w_hf')
+        self.w_cf = create_shared(random_weights((hidden_dim, hidden_dim)), name + '__w_cf')
 
         # Output gate weights
-        self.w_xo = create_shared(drange_x * random_weights((input_dim, hidden_dim)), name + '__w_xo')
-        self.w_ho = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '__w_ho')
-        self.w_co = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '__w_co')
+        self.w_xo = create_shared(random_weights((input_dim, hidden_dim)), name + '__w_xo')
+        self.w_ho = create_shared(random_weights((hidden_dim, hidden_dim)), name + '__w_ho')
+        self.w_co = create_shared(random_weights((hidden_dim, hidden_dim)), name + '__w_co')
 
         # Cell weights
-        self.w_xc = create_shared(drange_x * random_weights((input_dim, hidden_dim)), name + '__w_xc')
-        self.w_hc = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '__w_hc')
+        self.w_xc = create_shared(random_weights((input_dim, hidden_dim)), name + '__w_xc')
+        self.w_hc = create_shared(random_weights((hidden_dim, hidden_dim)), name + '__w_hc')
 
         # Initialize the bias vectors, c_0 and h_0 to zero vectors
         self.b_i = create_shared(np.zeros((hidden_dim,)), name + '__b_i')
@@ -186,23 +178,19 @@ class GRU(object):
         self.with_batch = with_batch
         self.name = name
 
-        # Domain range for weights initialization
-        drange_x = get_drange((input_dim, hidden_dim))
-        drange_h = get_drange((hidden_dim, hidden_dim))
-
         # Update gate weights and bias
-        self.w_z = create_shared(drange_x * random_weights((input_dim, hidden_dim)), name + '__w_z')
-        self.u_z = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '__u_z')
+        self.w_z = create_shared(random_weights((input_dim, hidden_dim)), name + '__w_z')
+        self.u_z = create_shared(random_weights((hidden_dim, hidden_dim)), name + '__u_z')
         self.b_z = create_shared(np.zeros((hidden_dim,)), name + '__b_z')
 
         # Reset gate weights and bias
-        self.w_r = create_shared(drange_x * random_weights((input_dim, hidden_dim)), name + '__w_r')
-        self.u_r = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '__u_r')
+        self.w_r = create_shared(random_weights((input_dim, hidden_dim)), name + '__w_r')
+        self.u_r = create_shared(random_weights((hidden_dim, hidden_dim)), name + '__u_r')
         self.b_r = create_shared(np.zeros((hidden_dim,)), name + '__b_r')
 
         # New memory content weights and bias
-        self.w_c = create_shared(drange_x * random_weights((input_dim, hidden_dim)), name + '__w_c')
-        self.u_c = create_shared(drange_h * random_weights((hidden_dim, hidden_dim)), name + '__u_c')
+        self.w_c = create_shared(random_weights((input_dim, hidden_dim)), name + '__w_c')
+        self.u_c = create_shared(random_weights((hidden_dim, hidden_dim)), name + '__u_c')
         self.b_c = create_shared(np.zeros((hidden_dim,)), name + '__b_c')
 
         # Initialize the bias vector, h_0, to the zero vector

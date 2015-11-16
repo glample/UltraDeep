@@ -727,16 +727,16 @@ def test_conv2d_layer_kmax_pooling():
 """
 """
 
-# test_hidden_layer()
-# test_embedding_layer()
-# test_rnn()
-# test_lstm()
-# test_kmax_pooling_layer_1()
-# test_kmax_pooling_layer_2()
-# test_conv1d_layer()
-# test_conv2d_layer()
-# test_conv1d_layer_kmax_pooling()
-# test_conv2d_layer_kmax_pooling()
+test_hidden_layer()
+test_embedding_layer()
+test_rnn()
+test_lstm()
+test_kmax_pooling_layer_1()
+test_kmax_pooling_layer_2()
+test_conv1d_layer()
+test_conv2d_layer()
+test_conv1d_layer_kmax_pooling()
+test_conv2d_layer_kmax_pooling()
 
 
 exit()

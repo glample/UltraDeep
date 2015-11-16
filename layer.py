@@ -1,7 +1,7 @@
 import numpy as np
 import theano
 import theano.tensor as T
-from utils import create_shared, get_drange, random_weights
+from utils import create_shared, random_weights
 
 floatX = theano.config.floatX
 device = theano.config.device
@@ -32,14 +32,12 @@ class HiddenLayer(object):
         else:
             raise Exception("Unknown activation function: " % activation)
 
-        # Domain range for weights initialization
-        drange = get_drange((input_dim, output_dim), activation)
-
         # Initialize weights and bias
         self.weights = create_shared(
-            drange * random_weights((input_dim, output_dim)),
+            random_weights((input_dim, output_dim)),
             name + '__weights'
         )
+
         self.bias = create_shared(np.zeros((output_dim,)), name + '__bias')
 
         # Define parameters
