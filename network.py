@@ -133,9 +133,9 @@ class LSTM(object):
         def recurrence(x_t, c_tm1, h_tm1):
             i_t = T.nnet.sigmoid(T.dot(x_t, self.w_xi) + T.dot(h_tm1, self.w_hi) + T.dot(c_tm1, self.w_ci) + self.b_i)
             f_t = T.nnet.sigmoid(T.dot(x_t, self.w_xf) + T.dot(h_tm1, self.w_hf) + T.dot(c_tm1, self.w_cf) + self.b_f)
-            c_t = f_t * c_tm1 + i_t * T.nnet.sigmoid(T.dot(x_t, self.w_xc) + T.dot(h_tm1, self.w_hc) + self.b_c)
+            c_t = f_t * c_tm1 + i_t * T.tanh(T.dot(x_t, self.w_xc) + T.dot(h_tm1, self.w_hc) + self.b_c)
             o_t = T.nnet.sigmoid(T.dot(x_t, self.w_xo) + T.dot(h_tm1, self.w_ho) + T.dot(c_t, self.w_co) + self.b_o)
-            h_t = o_t * T.nnet.sigmoid(c_t)
+            h_t = o_t * T.tanh(c_t)
             return [c_t, h_t]
 
         # If we used batches, we have to permute the first and second dimension.

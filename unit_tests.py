@@ -279,9 +279,9 @@ def test_lstm():
                 x_t = input_value[i]
                 i_t = expit(np.dot(x_t, lstm.w_xi.get_value()) + np.dot(h_t, lstm.w_hi.get_value()) + np.dot(c_t, lstm.w_ci.get_value()) + lstm.b_i.get_value())
                 f_t = expit(np.dot(x_t, lstm.w_xf.get_value()) + np.dot(h_t, lstm.w_hf.get_value()) + np.dot(c_t, lstm.w_cf.get_value()) + lstm.b_f.get_value())
-                c_t = f_t * c_t + i_t * expit(np.dot(x_t, lstm.w_xc.get_value()) + np.dot(h_t, lstm.w_hc.get_value()) + lstm.b_c.get_value())
+                c_t = f_t * c_t + i_t * np.tanh(np.dot(x_t, lstm.w_xc.get_value()) + np.dot(h_t, lstm.w_hc.get_value()) + lstm.b_c.get_value())
                 o_t = expit(np.dot(x_t, lstm.w_xo.get_value()) + np.dot(h_t, lstm.w_ho.get_value()) + np.dot(c_t, lstm.w_co.get_value()) + lstm.b_o.get_value())
-                h_t = o_t * expit(c_t)
+                h_t = o_t * np.tanh(c_t)
 
             assert h_t.shape == (hidden_dim,)
             np.testing.assert_array_almost_equal(
@@ -324,9 +324,9 @@ def test_lstm():
                 x_t = input_value_dimshuffled[i]
                 i_t = expit(np.dot(x_t, lstm.w_xi.get_value()) + np.dot(h_t, lstm.w_hi.get_value()) + np.dot(c_t, lstm.w_ci.get_value()) + lstm.b_i.get_value())
                 f_t = expit(np.dot(x_t, lstm.w_xf.get_value()) + np.dot(h_t, lstm.w_hf.get_value()) + np.dot(c_t, lstm.w_cf.get_value()) + lstm.b_f.get_value())
-                c_t = f_t * c_t + i_t * expit(np.dot(x_t, lstm.w_xc.get_value()) + np.dot(h_t, lstm.w_hc.get_value()) + lstm.b_c.get_value())
+                c_t = f_t * c_t + i_t * np.tanh(np.dot(x_t, lstm.w_xc.get_value()) + np.dot(h_t, lstm.w_hc.get_value()) + lstm.b_c.get_value())
                 o_t = expit(np.dot(x_t, lstm.w_xo.get_value()) + np.dot(h_t, lstm.w_ho.get_value()) + np.dot(c_t, lstm.w_co.get_value()) + lstm.b_o.get_value())
-                h_t = o_t * expit(c_t)
+                h_t = o_t * np.tanh(c_t)
 
             assert h_t.shape == (input_value.shape[0], hidden_dim)
             np.testing.assert_array_almost_equal(output.eval({input: input_value}), h_t, decimal=3)
@@ -727,16 +727,16 @@ def test_conv2d_layer_kmax_pooling():
 """
 """
 
-test_hidden_layer()
-test_embedding_layer()
-test_rnn()
+# test_hidden_layer()
+# test_embedding_layer()
+# test_rnn()
 test_lstm()
-test_kmax_pooling_layer_1()
-test_kmax_pooling_layer_2()
-test_conv1d_layer()
-test_conv2d_layer()
-test_conv1d_layer_kmax_pooling()
-test_conv2d_layer_kmax_pooling()
+# test_kmax_pooling_layer_1()
+# test_kmax_pooling_layer_2()
+# test_conv1d_layer()
+# test_conv2d_layer()
+# test_conv1d_layer_kmax_pooling()
+# test_conv2d_layer_kmax_pooling()
 
 
 exit()
