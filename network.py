@@ -95,9 +95,9 @@ class LSTM(object):
         self.w_ci = create_shared(random_weights((hidden_dim, hidden_dim)), name + '__w_ci')
 
         # Forget gate weights
-        self.w_xf = create_shared(random_weights((input_dim, hidden_dim)), name + '__w_xf')
-        self.w_hf = create_shared(random_weights((hidden_dim, hidden_dim)), name + '__w_hf')
-        self.w_cf = create_shared(random_weights((hidden_dim, hidden_dim)), name + '__w_cf')
+        #self.w_xf = create_shared(random_weights((input_dim, hidden_dim)), name + '__w_xf')
+        #self.w_hf = create_shared(random_weights((hidden_dim, hidden_dim)), name + '__w_hf')
+        #self.w_cf = create_shared(random_weights((hidden_dim, hidden_dim)), name + '__w_cf')
 
         # Output gate weights
         self.w_xo = create_shared(random_weights((input_dim, hidden_dim)), name + '__w_xo')
@@ -118,10 +118,10 @@ class LSTM(object):
 
         # Define parameters
         self.params = [self.w_xi, self.w_hi, self.w_ci,
-                       self.w_xf, self.w_hf, self.w_cf,
+                       # self.w_xf, self.w_hf, self.w_cf,
                        self.w_xo, self.w_ho, self.w_co,
                        self.w_xc, self.w_hc,
-                       self.b_i, self.b_f, self.b_c, self.b_o,
+                       self.b_i, self.b_c, self.b_o, # self.b_f, 
                        self.c_0, self.h_0]
 
     def link(self, input):
@@ -132,8 +132,8 @@ class LSTM(object):
 
         def recurrence(x_t, c_tm1, h_tm1):
             i_t = T.nnet.sigmoid(T.dot(x_t, self.w_xi) + T.dot(h_tm1, self.w_hi) + T.dot(c_tm1, self.w_ci) + self.b_i)
-            f_t = T.nnet.sigmoid(T.dot(x_t, self.w_xf) + T.dot(h_tm1, self.w_hf) + T.dot(c_tm1, self.w_cf) + self.b_f)
-            c_t = f_t * c_tm1 + i_t * T.tanh(T.dot(x_t, self.w_xc) + T.dot(h_tm1, self.w_hc) + self.b_c)
+            # f_t = T.nnet.sigmoid(T.dot(x_t, self.w_xf) + T.dot(h_tm1, self.w_hf) + T.dot(c_tm1, self.w_cf) + self.b_f)
+            c_t = (1 - i_t) * c_tm1 + i_t * T.tanh(T.dot(x_t, self.w_xc) + T.dot(h_tm1, self.w_hc) + self.b_c)
             o_t = T.nnet.sigmoid(T.dot(x_t, self.w_xo) + T.dot(h_tm1, self.w_ho) + T.dot(c_t, self.w_co) + self.b_o)
             h_t = o_t * T.tanh(c_t)
             return [c_t, h_t]
