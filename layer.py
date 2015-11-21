@@ -16,7 +16,6 @@ class HiddenLayer(object):
 
     def __init__(self, input_dim, output_dim, bias=True, activation='sigmoid',
                  name='hidden_layer'):
-
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.bias = bias
@@ -74,7 +73,6 @@ class EmbeddingLayer(object):
         Typically, input_dim is the vocabulary size,
         and output_dim the embedding dimension.
         """
-
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.name = name
@@ -103,4 +101,30 @@ class EmbeddingLayer(object):
         #     )
         # else:
         self.output = self.embeddings[self.input]
+        return self.output
+
+
+class DropoutLayer(object):
+    """
+    Dropout layer. Randomly set to 0 values of the input,
+    with probability 1 - p
+    """
+
+    def __init__(self, p=0.5, name='dropout_layer'):
+        """
+        p has to be between 0 and 1.
+        p is the probability of NOT dropping out a unit, so
+        setting p to 1.0 is equivalent to have an identity layer.
+        """
+        assert 0. <= p <= 1.
+        self.p = p
+        self.rng = T.shared_randomstreams.RandomStreams(seed=123456)
+        self.name = name
+
+    def link(self, input):
+        """
+        Dropout link: we just apply mask to the input.
+        """
+        mask = self.rng.binomial(n=1, p=self.p, size=input.shape, dtype=floatX)
+        self.output = input * mask
         return self.output
