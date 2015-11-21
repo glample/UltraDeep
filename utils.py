@@ -4,6 +4,7 @@ import logging
 import time
 from datetime import timedelta
 from time import strftime
+from collections import OrderedDict
 
 floatX = theano.config.floatX
 device = theano.config.device
@@ -13,10 +14,33 @@ def get_experiment_name(params):
     """
     Generate an experiment name from the parameters.
     """
+    l = []
+    for k, v in params.items():
+        if type(v) is str and "/" in v:
+            l.append((k, v[::-1][:v[::-1].index('/')][::-1]))
+        else:
+            l.append((k, v))
     experiment_name = ",".join([
-        "%s=%s" % (k, str(v)) for k, v in params.items()
+        "%s=%s" % (k, str(v).replace(',', '')) for k, v in l
     ])
     return "".join(i for i in experiment_name if i not in "\/:*?<>|")
+
+
+def parse_experiment_name(s):
+    """
+    Parse experiment name. Convert it into a dictionary of parameters.
+    """
+    parameters = OrderedDict()
+    for p in s.split(','):
+        splitted = p.split('=')
+        assert len(splitted) == 2
+        if splitted[1] in ['True', 'False']:
+            parameters[splitted[0]] = splitted[1] == 'True'
+        elif splitted[1].isdigit():
+            parameters[splitted[0]] = int(splitted[1])
+        else:
+            parameters[splitted[0]] = splitted[1]
+    return parameters
 
 
 class LogFormatter():
