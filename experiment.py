@@ -15,7 +15,7 @@ class Experiment(object):
     """
     Experiment. For easy saving and loading.
     """
-    def __init__(self, name, dump_path):
+    def __init__(self, name, dump_path, create_logger=True):
         """
         Initialize the experiment.
         """
@@ -26,7 +26,8 @@ class Experiment(object):
         if not os.path.exists(self.dump_path):
             os.makedirs(self.dump_path)
         self.logs_path = os.path.join(self.dump_path, "experiment.log")
-        self.log_formatter = utils.create_logger(self.logs_path)
+        if create_logger:
+            self.log_formatter = utils.create_logger(self.logs_path)
 
     def reset_time(self):
         """
@@ -76,7 +77,7 @@ class Experiment(object):
             else:
                 for param in component.params:
                     param_value = param.get_value()
-                    assert component_values[param.name].size == param_value.size
+                    assert component_values[param.name].size == param_value.size, (param, component_values[param.name].shape, param_value.shape)
                     param.set_value(np.reshape(
                         component_values[param.name],
                         param_value.shape

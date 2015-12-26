@@ -45,7 +45,7 @@ class LearningMethod:
             raise("Not implemented learning method: %s" % method)
         return updates
 
-    def sgd(self, cost, params, lr=0.1):
+    def sgd(self, cost, params, lr=0.01):
         """
         Stochatic gradient descent.
         """
