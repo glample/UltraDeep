@@ -38,6 +38,13 @@ best_path_prob_test = [
 ]
 best_path_prob_test = [np.array(x, dtype=np.float32) for x in best_path_prob_test]
 
+# Best sequences
+best_sequences_test = [
+    [0, 1],
+    [0, 0, 1],
+    [1, 1]
+]
+
 
 def log_sum_exp(x, axis=None):
     """
@@ -60,7 +67,7 @@ def log_sum_exp(x, axis=None):
 
 
 def forward_np_slow(observations, transitions, viterbi=False,
-                    return_alpha=False):
+                    return_alpha=False, return_best_sequence=False):
     """
     Takes as input:
         - observations, sequence of shape (n_steps, n_classes)
@@ -70,14 +77,18 @@ def forward_np_slow(observations, transitions, viterbi=False,
     alpha[i, j] represents one of these 2 values:
         - the probability that the real path at node i is in j
         - the maximum probability of a path finishing in j at node i (Viterbi)
-    Returns one of these 2 values:
+    Returns one of these 3 values:
         - alpha
         - the final probability, which can be:
             - the sum of the probabilities of all the paths
             - the probability of the best path (Viterbi)
+        - the best sequence using Viterbi decoding
     """
+    assert not return_best_sequence or (viterbi and not return_alpha)
     n_steps, n_classes = observations.shape
     alpha = np.empty((n_steps, n_classes))
+    if return_best_sequence:
+        beta = np.zeros((n_steps, n_classes)).astype(np.int32) * np.nan
     alpha[...] = np.nan
     alpha[0, :] = observations[0:1]
     # Use maximum if we are doing Viterbi decoding, logaddexp otherwise.
@@ -95,8 +106,19 @@ def forward_np_slow(observations, transitions, viterbi=False,
                     alpha[t, this_l] = a + c + o
                 else:
                     alpha[t, this_l] = reducer(e, a + c + o)
+            if t > 0 and return_best_sequence:
+                beta[t, this_l] = np.argmax(
+                    alpha[t - 1] +
+                    transitions[:, this_l] +
+                    observations[t, this_l]
+                )
     if return_alpha:
         return alpha
+    elif return_best_sequence:
+        best_sequence = [np.argmax(alpha[-1])]
+        for i in range(1, n_steps)[::-1]:
+            best_sequence.append(int(beta[i][best_sequence[-1]]))
+        return best_sequence[::-1]
     else:
         if viterbi:
             return alpha[-1].max(axis=0)
@@ -105,7 +127,7 @@ def forward_np_slow(observations, transitions, viterbi=False,
 
 
 def forward_np_fast(observations, transitions, viterbi=False,
-                    return_alpha=False):
+                    return_alpha=False, return_best_sequence=False):
     """
     Takes as input:
         - observations, sequence of shape (n_steps, n_classes)
@@ -115,14 +137,18 @@ def forward_np_fast(observations, transitions, viterbi=False,
     alpha[i, j] represents one of these 2 values:
         - the probability that the real path at node i is in j
         - the maximum probability of a path finishing in j at node i (Viterbi)
-    Returns one of these 2 values:
+    Returns one of these 3 values:
         - alpha
         - the final probability, which can be:
             - the sum of the probabilities of all the paths
             - the probability of the best path (Viterbi)
+        - the best sequence using Viterbi decoding
     """
+    assert not return_best_sequence or (viterbi and not return_alpha)
     n_steps, n_classes = observations.shape
-    alpha = np.empty((n_steps, n_classes)) * np.nan
+    alpha = np.empty((n_steps, n_classes))
+    if return_best_sequence:
+        beta = np.zeros((n_steps, n_classes), dtype=np.int32) * np.nan
     alpha[0, :] = observations[0:1]
     for t in xrange(1, n_steps):
         a = alpha[t - 1, :, np.newaxis]
@@ -130,10 +156,17 @@ def forward_np_fast(observations, transitions, viterbi=False,
         o = observations[t, np.newaxis, :]
         if viterbi:
             alpha[t] = (a + c + o).max(axis=0)
+            if return_best_sequence:
+                beta[t] = (a + c + o).argmax(axis=0)
         else:
             alpha[t] = log_sum_exp(a + c + o, axis=0)
     if return_alpha:
         return alpha
+    elif return_best_sequence:
+        best_sequence = [np.argmax(alpha[-1])]
+        for i in range(1, n_steps)[::-1]:
+            best_sequence.append(int(beta[i][best_sequence[-1]]))
+        return best_sequence[::-1]
     else:
         if viterbi:
             return alpha[-1].max(axis=0)
@@ -151,6 +184,7 @@ def test_forward_np_slow():
             np.log(transitions_test[i]),
             viterbi=False,
             return_alpha=True,
+            return_best_sequence=False
         )
         np.testing.assert_allclose(
             np.exp(alpha[-1]),
@@ -162,11 +196,25 @@ def test_forward_np_slow():
             np.log(observations_test[i]),
             np.log(transitions_test[i]),
             viterbi=True,
-            return_alpha=False
+            return_alpha=False,
+            return_best_sequence=False
         )
         np.testing.assert_allclose(
             np.exp(logprob),
             best_path_prob_test[i],
+            rtol=1e-6
+        )
+        # Viterbi best sequence
+        sequence = forward_np_slow(
+            np.log(observations_test[i]),
+            np.log(transitions_test[i]),
+            viterbi=True,
+            return_alpha=False,
+            return_best_sequence=True
+        )
+        np.testing.assert_allclose(
+            sequence,
+            best_sequences_test[i],
             rtol=1e-6
         )
     print "OK"
@@ -182,13 +230,35 @@ def test_forward_np_fast():
         obs = np.random.rand(seq_length, nb_tags)
         chain = np.random.rand(nb_tags, nb_tags)
         # No Viterbi
-        alpha1 = forward_np_slow(np.log(obs), np.log(chain))
-        alpha2 = forward_np_fast(np.log(obs), np.log(chain))
+        alpha1 = forward_np_slow(
+            np.log(obs), np.log(chain), viterbi=False,
+            return_alpha=True, return_best_sequence=False
+        )
+        alpha2 = forward_np_fast(
+            np.log(obs), np.log(chain), viterbi=False,
+            return_alpha=True, return_best_sequence=False
+        )
         np.testing.assert_allclose(alpha1, alpha2, rtol=1e-6)
         # Viterbi
-        alpha1 = forward_np_slow(np.log(obs), np.log(chain), viterbi=True)
-        alpha2 = forward_np_fast(np.log(obs), np.log(chain), viterbi=True)
+        alpha1 = forward_np_slow(
+            np.log(obs), np.log(chain), viterbi=True,
+            return_alpha=True, return_best_sequence=False
+        )
+        alpha2 = forward_np_fast(
+            np.log(obs), np.log(chain), viterbi=True,
+            return_alpha=True, return_best_sequence=False
+        )
         np.testing.assert_allclose(alpha1, alpha2, rtol=1e-6)
+        # Viterbi best sequence
+        sequence1 = forward_np_slow(
+            np.log(obs), np.log(chain), viterbi=True,
+            return_alpha=False, return_best_sequence=True
+        )
+        sequence2 = forward_np_fast(
+            np.log(obs), np.log(chain), viterbi=True,
+            return_alpha=False, return_best_sequence=True
+        )
+        np.testing.assert_allclose(sequence1, sequence2, rtol=1e-6)
     print "OK"
 
 
@@ -202,7 +272,8 @@ def test_forward_theano():
             observations_input_test,
             transitions_input_test,
             viterbi=False,
-            return_alpha=True
+            return_alpha=True,
+            return_best_sequence=False
         )
     )
     f_theano_viterbi = theano.function(
@@ -211,7 +282,18 @@ def test_forward_theano():
             observations_input_test,
             transitions_input_test,
             viterbi=True,
-            return_alpha=True
+            return_alpha=True,
+            return_best_sequence=False
+        )
+    )
+    f_theano_viterbi_sequence = theano.function(
+        inputs=[observations_input_test, transitions_input_test],
+        outputs=crf.forward(
+            observations_input_test,
+            transitions_input_test,
+            viterbi=True,
+            return_alpha=False,
+            return_best_sequence=True
         )
     )
     for i in xrange(30):
@@ -225,11 +307,12 @@ def test_forward_theano():
             np.log(obs),
             np.log(chain),
             viterbi=False,
-            return_alpha=True
+            return_alpha=True,
+            return_best_sequence=False
         )
         alpha2 = f_theano_no_viterbi(
             np.log(obs),
-            np.log(chain)
+            np.log(chain),
         )
         np.testing.assert_allclose(alpha1[-1], alpha2[-1], rtol=1e-4)
         # Viterbi
@@ -237,13 +320,27 @@ def test_forward_theano():
             np.log(obs),
             np.log(chain),
             viterbi=True,
-            return_alpha=True
+            return_alpha=True,
+            return_best_sequence=False
         )
         alpha2 = f_theano_viterbi(
             np.log(obs),
             np.log(chain)
         )
         np.testing.assert_allclose(alpha1[-1], alpha2[-1], rtol=1e-4)
+        # Viterbi best sequence
+        sequence1 = forward_np_fast(
+            np.log(obs),
+            np.log(chain),
+            viterbi=True,
+            return_alpha=False,
+            return_best_sequence=True
+        )
+        sequence2 = f_theano_viterbi_sequence(
+            np.log(obs),
+            np.log(chain)
+        )
+        np.testing.assert_allclose(sequence1, sequence2, rtol=1e-4)
     print "OK"
 
 

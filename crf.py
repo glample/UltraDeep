@@ -11,8 +11,8 @@ def log_sum_exp(x, axis=None):
     return xmax_ + T.log(T.exp(x - xmax).sum(axis=axis))
 
 
-def forward(observations, transitions, log_space=True, viterbi=False,
-            return_alpha=False):
+def forward(observations, transitions, viterbi=False,
+            return_alpha=False, return_best_sequence=False):
     """
     Takes as input:
         - observations, sequence of shape (n_steps, n_classes)
@@ -28,17 +28,21 @@ def forward(observations, transitions, log_space=True, viterbi=False,
             - the sum of the probabilities of all the paths
             - the probability of the best path (Viterbi)
     """
+    assert not return_best_sequence or (viterbi and not return_alpha)
+
     def recurrence(obs, previous, transitions):
         previous = previous.dimshuffle(0, 'x')
         obs = obs.dimshuffle('x', 0)
         if viterbi:
-            out = (previous + obs + transitions).max(axis=0)
-        else:
-            if log_space:
-                out = log_sum_exp(previous + obs + transitions, axis=0)
+            scores = previous + obs + transitions
+            out = scores.max(axis=0)
+            if return_best_sequence:
+                out2 = scores.argmax(axis=0)
+                return out, out2
             else:
-                out = (previous + obs + transitions).sum(axis=0)
-        return out
+                return out
+        else:
+            return log_sum_exp(previous + obs + transitions, axis=0)
 
     # assert observations.ndim == 2
     # assert transitions.ndim == 2
@@ -46,13 +50,21 @@ def forward(observations, transitions, log_space=True, viterbi=False,
     initial = observations[0]
     alpha, _ = theano.scan(
         fn=recurrence,
-        outputs_info=initial,
+        outputs_info=(initial, None) if return_best_sequence else initial,
         sequences=[observations[1:]],
         non_sequences=transitions
     )
 
     if return_alpha:
         return alpha
+    elif return_best_sequence:
+        sequence, _ = theano.scan(
+            fn=lambda beta_i, previous: beta_i[previous],
+            outputs_info=T.cast(T.argmax(alpha[0][-1]), 'int32'),
+            sequences=T.cast(alpha[1][::-1], 'int32')
+        )
+        sequence = T.concatenate([sequence[::-1], [T.argmax(alpha[0][-1])]])
+        return sequence
     else:
         if viterbi:
             return alpha[-1].max(axis=0)
@@ -71,11 +83,12 @@ def forward_dynamic(observations, transitions, log_space=True, viterbi=False,
     alpha[i, j] represents one of these 2 values:
         - the probability that the real path at node i is in j
         - the maximum probability of a path finishing in j at node i (Viterbi)
-    Returns one of these 2 values:
+    Returns one of these 3 values:
         - alpha
         - the final probability, which can be:
             - the sum of the probabilities of all the paths
             - the probability of the best path (Viterbi)
+        - the best sequence using Viterbi decoding
     """
     def recurrence(obs, previous, transitions):
         previous = previous.dimshuffle(0, 'x')
