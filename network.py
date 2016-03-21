@@ -15,7 +15,7 @@ class RNN(object):
         Input: matrix of dimension (sequence_length, input_dim)
         Output: vector of dimension (output_dim)
     With batches:
-        Input: tensor3 of dimension (sequence_length, batch_size, input_dim)
+        Input: tensor3 of dimension (batch_size, sequence_length, input_dim)
         Output: matrix of dimension (batch_size, output_dim)
     """
 
@@ -77,7 +77,7 @@ class LSTM(object):
         Input: matrix of dimension (sequence_length, input_dim)
         Output: vector of dimension (output_dim)
     With batches:
-        Input: tensor3 of dimension (sequence_length, batch_size, input_dim)
+        Input: tensor3 of dimension (batch_size, sequence_length, input_dim)
         Output: matrix of dimension (batch_size, output_dim)
     """
 
@@ -96,9 +96,9 @@ class LSTM(object):
         self.w_ci = create_shared(random_weights((hidden_dim, hidden_dim)), name + '__w_ci')
 
         # Forget gate weights
-        # self.w_xf = create_shared(random_weights((input_dim, hidden_dim)), name + '__w_xf')
-        # self.w_hf = create_shared(random_weights((hidden_dim, hidden_dim)), name + '__w_hf')
-        # self.w_cf = create_shared(random_weights((hidden_dim, hidden_dim)), name + '__w_cf')
+        self.w_xf = create_shared(random_weights((input_dim, hidden_dim)), name + '__w_xf')
+        self.w_hf = create_shared(random_weights((hidden_dim, hidden_dim)), name + '__w_hf')
+        self.w_cf = create_shared(random_weights((hidden_dim, hidden_dim)), name + '__w_cf')
 
         # Output gate weights
         self.w_xo = create_shared(random_weights((input_dim, hidden_dim)), name + '__w_xo')
@@ -118,11 +118,11 @@ class LSTM(object):
         self.h_0 = create_shared(np.zeros((hidden_dim,)), name + '__h_0')
 
         # Define parameters
-        self.params = [self.w_xi, self.w_hi, self.w_ci,
-                       # self.w_xf, self.w_hf, self.w_cf,
-                       self.w_xo, self.w_ho, self.w_co,
+        self.params = [self.w_xi, self.w_hi,  # self.w_ci,
+                       self.w_xf, self.w_hf,  # self.w_cf,
+                       self.w_xo, self.w_ho,  # self.w_co,
                        self.w_xc, self.w_hc,
-                       self.b_i, self.b_c, self.b_o,  # self.b_f, 
+                       self.b_i, self.b_c, self.b_o, self.b_f,
                        self.c_0, self.h_0]
 
     def link(self, input):
@@ -132,10 +132,10 @@ class LSTM(object):
         """
 
         def recurrence(x_t, c_tm1, h_tm1):
-            i_t = T.nnet.sigmoid(T.dot(x_t, self.w_xi) + T.dot(h_tm1, self.w_hi) + T.dot(c_tm1, self.w_ci) + self.b_i)
-            # f_t = T.nnet.sigmoid(T.dot(x_t, self.w_xf) + T.dot(h_tm1, self.w_hf) + T.dot(c_tm1, self.w_cf) + self.b_f)
-            c_t = (1 - i_t) * c_tm1 + i_t * T.tanh(T.dot(x_t, self.w_xc) + T.dot(h_tm1, self.w_hc) + self.b_c)
-            o_t = T.nnet.sigmoid(T.dot(x_t, self.w_xo) + T.dot(h_tm1, self.w_ho) + T.dot(c_t, self.w_co) + self.b_o)
+            i_t = T.nnet.sigmoid(T.dot(x_t, self.w_xi) + T.dot(h_tm1, self.w_hi) + self.b_i)  # + T.dot(c_tm1, self.w_ci)
+            f_t = T.nnet.sigmoid(T.dot(x_t, self.w_xf) + T.dot(h_tm1, self.w_hf) + self.b_f)  # + T.dot(c_tm1, self.w_cf)
+            c_t = f_t * c_tm1 + i_t * T.tanh(T.dot(x_t, self.w_xc) + T.dot(h_tm1, self.w_hc) + self.b_c)
+            o_t = T.nnet.sigmoid(T.dot(x_t, self.w_xo) + T.dot(h_tm1, self.w_ho) + self.b_o)  # + T.dot(c_t, self.w_co)
             h_t = o_t * T.tanh(c_t)
             return [c_t, h_t]
 
@@ -147,11 +147,68 @@ class LSTM(object):
             self.input = input
             outputs_info = [self.c_0, self.h_0]
 
-        [_, h], _ = theano.scan(
+        [c, h], _ = theano.scan(
             fn=recurrence,
             sequences=self.input,
             outputs_info=outputs_info,
             n_steps=self.input.shape[0]
+        )
+        self.c = c
+        self.h = h
+        self.output = h[-1]
+
+        return self.output
+
+
+class FastLSTM(object):
+    """
+    LSTM with faster implementation.
+    Not as expressive as the previous one though, because it doesn't include the peepholes connections.
+    """
+    def __init__(self, input_dim, hidden_dim, with_batch=True, name='LSTM'):
+        """
+        Initialize neural network.
+        """
+        self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
+        self.with_batch = with_batch
+        self.name = name
+
+        self.W = create_shared(random_weights((input_dim, hidden_dim * 4)), name + 'W')
+        self.U = create_shared(random_weights((hidden_dim, hidden_dim * 4)), name + 'U')
+        self.b = create_shared(random_weights((hidden_dim * 4, )), name + 'b')
+
+        self.c_0 = create_shared(np.zeros((hidden_dim,)), name + '__c_0')
+        self.h_0 = create_shared(np.zeros((hidden_dim,)), name + '__h_0')
+
+        self.params = [self.W, self.U, self.b]
+
+    def link(self, input):
+        """
+        Propagate the input through the network and return the last hidden vector.
+        The whole sequence is also accessible through self.h
+        """
+        def split(x, n, dim):
+            return x[:, n*dim:(n+1)*dim]
+
+        def recurrence(x_t, c_tm1, h_tm1):
+            p = x_t + T.dot(h_tm1, self.U)
+            i = T.nnet.sigmoid(split(p, 0, self.hidden_dim))
+            f = T.nnet.sigmoid(split(p, 1, self.hidden_dim))
+            o = T.nnet.sigmoid(split(p, 2, self.hidden_dim))
+            c = T.tanh(split(p, 3, self.hidden_dim))
+            c = f * c_tm1 + i * c
+            h = o * T.tanh(c)
+            return c, h
+
+        preact = T.dot(input.dimshuffle(1, 0, 2), self.W) + self.b
+        outputs_info = [T.alloc(x, input.shape[0], self.hidden_dim) for x in [self.c_0, self.h_0]]
+
+        [_, h], _ = theano.scan(
+            fn=recurrence,
+            sequences=preact,
+            outputs_info=outputs_info,
+            n_steps=input.shape[1]
         )
         self.h = h
         self.output = h[-1]
@@ -166,7 +223,7 @@ class GRU(object):
         Input: matrix of dimension (sequence_length, input_dim)
         Output: vector of dimension (output_dim)
     With batches:
-        Input: tensor3 of dimension (sequence_length, batch_size, input_dim)
+        Input: tensor3 of dimension (batch_size, sequence_length, input_dim)
         Output: matrix of dimension (batch_size, output_dim)
     """
 
@@ -247,7 +304,7 @@ class FLSTM(object):
             - s: matrix of dimension (sequence_length, output_dim)
             - y: vector of dimension (sequence_length,)
     With batches:
-        Input: tensor3 of dimension (sequence_length, batch_size, input_dim)
+        Input: tensor3 of dimension (batch_size, sequence_length, input_dim)
         Output:
             - h: tensor3 of dimension (batch_size, sequence_length, hidden_dim)
             - s: tensor3 of dimension (batch_size, sequence_length, output_dim)
@@ -374,7 +431,7 @@ class DeepLSTM(object):
         Input: matrix of dimension (sequence_length, input_dim)
         Output: vector of dimension (output_dim)
     With batches:
-        Input: tensor3 of dimension (sequence_length, batch_size, input_dim)
+        Input: tensor3 of dimension (batch_size, sequence_length, input_dim)
         Output: matrix of dimension (batch_size, output_dim)
     """
 
@@ -407,8 +464,12 @@ class DeepLSTM(object):
                 for _ in xrange(len(hidden_dim))
             ]
 
-        # Define parameters
-        self.params = sum([lstm.params for lstm in self.lstms], [])
+    @property
+    def params(self):
+        """
+        Return network parameters.
+        """
+        return sum([lstm.params for lstm in self.lstms], [])
 
     def link(self, input, is_train=None):
         """
