@@ -1,5 +1,22 @@
 import theano.tensor as T
 import theano.sandbox.neighbours as TSN
+from theano.tensor.signal.downsample import max_pool_2d
+
+
+class PoolLayer2D(object):
+
+    def __init__(self, pool_size):
+        self.pool_size = pool_size
+
+    def link(self, input):
+        return max_pool_2d(
+            input=input,
+            ds=(self.pool_size, self.pool_size),
+            ignore_border=True,
+            st=None,
+            padding=(0, 0),
+            mode='max'
+        )
 
 
 class KMaxPoolingLayer1(object):

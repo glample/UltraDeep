@@ -28,8 +28,10 @@ class HiddenLayer(object):
             self.activation = T.nnet.sigmoid
         elif activation == 'softmax':
             self.activation = T.nnet.softmax
+        elif activation == 'relu':
+            self.activation = T.nnet.relu
         else:
-            raise Exception("Unknown activation function: " % activation)
+            raise Exception("Unknown activation function: %s" % activation)
 
         # Initialize weights and bias
         self.weights = create_shared(

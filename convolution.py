@@ -58,7 +58,7 @@ class Conv1DLayer(object):
         return self.output
 
 
-class Conv2DLayer(object):
+class Conv2DLayerOld(object):
     """
     2D Convolutional neural layer.
     """
@@ -109,6 +109,60 @@ class Conv2DLayer(object):
         # bias + squash function
         self.linear_output = self.conv_out + self.bias.dimshuffle('x', 0, 'x', 'x')
         self.output = T.tanh(self.linear_output)
+
+        return self.output
+
+
+class Conv2DLayer(object):
+    """
+    2D Convolutional neural layer.
+    """
+
+    def __init__(self, nb_filters, stack_size, filter_height, filter_width, border_mode, name, stride=(1, 1)):
+        """
+        Construct a convolutional layer.
+        """
+        self.nb_filters = nb_filters
+        self.stack_size = stack_size
+        self.filter_height = filter_height
+        self.filter_width = filter_width
+        self.border_mode = border_mode
+        self.name = name
+        self.filter_shape = (nb_filters, stack_size, filter_height, filter_width)
+        self.stride = stride
+
+        fan_in = stack_size * filter_height * filter_width       # number of inputs to each hidden unit
+        fan_out = ((nb_filters * filter_height * filter_width))  # each unit in the lower layer receives a gradient from
+        drange = np.sqrt(6. / (fan_in + fan_out))                # initialize filters with random values
+
+        self.filters = create_shared(drange * random_weights(self.filter_shape), name + '__filters')
+        self.bias = create_shared(np.zeros((nb_filters,)), name + '__bias')
+
+        # parameters in the layer
+        self.params = [self.filters, self.bias]
+
+    def link(self, input):
+        """
+        Convolve input feature maps with filters.
+        Input: Feature map of dimension (batch_size, stack_size, nb_rows, nb_cols)
+        Output: Feature map of dimension (batch_size, nb_filters, output_rows, output_cols)
+        """
+
+        # convolutional layer
+        self.conv_out = T.nnet.conv2d(
+            input=input,
+            filters=self.filters,
+            # input_shape=None, _TODO_ might be faster
+            filter_shape=self.filter_shape,
+            border_mode=self.border_mode,
+            subsample=self.stride,
+            filter_flip=False,
+            # image_shape=None
+        )
+
+        # bias + squash function
+        self.linear_output = self.conv_out + self.bias.dimshuffle('x', 0, 'x', 'x')
+        self.output = T.nnet.relu(self.linear_output)
 
         return self.output
 
