@@ -118,7 +118,7 @@ class Conv2DLayer(object):
     2D Convolutional neural layer.
     """
 
-    def __init__(self, nb_filters, stack_size, filter_height, filter_width, border_mode, name, stride=(1, 1)):
+    def __init__(self, nb_filters, stack_size, filter_height, filter_width, border_mode, stride, name):
         """
         Construct a convolutional layer.
         """
@@ -127,9 +127,9 @@ class Conv2DLayer(object):
         self.filter_height = filter_height
         self.filter_width = filter_width
         self.border_mode = border_mode
-        self.name = name
         self.filter_shape = (nb_filters, stack_size, filter_height, filter_width)
         self.stride = stride
+        self.name = name
 
         fan_in = stack_size * filter_height * filter_width       # number of inputs to each hidden unit
         fan_out = ((nb_filters * filter_height * filter_width))  # each unit in the lower layer receives a gradient from
