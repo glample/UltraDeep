@@ -108,17 +108,16 @@ class EmbeddingLayer(object):
 
 class DropoutLayer(object):
     """
-    Dropout layer. Randomly set to 0 values of the input,
-    with probability 1 - p
+    Dropout layer. Randomly set to 0 values of the input, with probability p.
     """
 
     def __init__(self, p=0.5, name='dropout_layer'):
         """
         p has to be between 0 and 1.
-        p is the probability of NOT dropping out a unit, so
-        setting p to 1.0 is equivalent to have an identity layer.
+        p is the probability of dropping out a unit, so
+        setting p to 0 is equivalent to have an identity layer.
         """
-        assert 0. <= p <= 1.
+        assert 0. <= p < 1.
         self.p = p
         self.rng = T.shared_randomstreams.RandomStreams(seed=123456)
         self.name = name
@@ -127,6 +126,6 @@ class DropoutLayer(object):
         """
         Dropout link: we just apply mask to the input.
         """
-        mask = self.rng.binomial(n=1, p=self.p, size=input.shape, dtype=floatX)
+        mask = self.rng.binomial(n=1, p=(1 - self.p), size=input.shape, dtype=floatX)
         self.output = input * mask
         return self.output
