@@ -136,7 +136,7 @@ class Conv2DLayer(object):
         drange = np.sqrt(6. / (fan_in + fan_out))                # initialize filters with random values
 
         self.filters = create_shared(drange * random_weights(self.filter_shape), name + '__filters')
-        self.bias = create_shared(np.zeros((nb_filters,)), name + '__bias')
+        self.bias = create_shared(np.ones((nb_filters,)), name + '__bias')
 
         # parameters in the layer
         self.params = [self.filters, self.bias]

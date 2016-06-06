@@ -39,7 +39,10 @@ class HiddenLayer(object):
             name + '__weights'
         )
 
-        self.bias = create_shared(np.zeros((output_dim,)), name + '__bias')
+        if activation == 'relu':
+            self.bias = create_shared(np.ones((output_dim,)), name + '__bias')
+        else:
+            self.bias = create_shared(np.zeros((output_dim,)), name + '__bias')
 
         # Define parameters
         if self.bias:
@@ -126,6 +129,9 @@ class DropoutLayer(object):
         """
         Dropout link: we just apply mask to the input.
         """
-        mask = self.rng.binomial(n=1, p=(1 - self.p), size=input.shape, dtype=floatX)
-        self.output = input * mask
+        if self.p > 0:
+            mask = self.rng.binomial(n=1, p=(1 - self.p), size=input.shape, dtype=floatX)
+            self.output = input * mask
+        else:
+            self.output = input
         return self.output
