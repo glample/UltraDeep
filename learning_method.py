@@ -1,6 +1,7 @@
 import numpy as np
 import theano
 import theano.tensor as T
+from collections import OrderedDict
 
 floatX = theano.config.floatX
 device = theano.config.device
@@ -41,6 +42,10 @@ class LearningMethod:
             updates = self.adadelta(cost, params, **kwargs)
         elif method == 'adam':
             updates = self.adam(cost, params, **kwargs)
+        elif method == 'rmsprop':
+            updates = self.rmsprop(cost, params, **kwargs)
+        elif method == 'dm_rmsprop':
+            updates = self.dm_rmsprop(cost, params, **kwargs)
         else:
             raise("Not implemented learning method: %s" % method)
         return updates
@@ -155,4 +160,56 @@ class LearningMethod:
             updates.append((param, theta))
 
         updates.append((t, t + 1.))
+        return updates
+
+    def rmsprop(self, cost, params, lr=0.0002, rho=0.99, epsilon=1e-6):
+        """
+        RMSProp.
+        """
+        gradients = self.get_gradients(cost, params)
+        accumulators = [
+            theano.shared(
+                np.zeros_like(param.get_value(borrow=True)).astype(floatX)
+            )
+            for param in params
+        ]
+
+        updates = []
+        for param, gradient, accumulator in zip(params, gradients, accumulators):
+            new_accumulator = rho * accumulator + (1 - rho) * gradient ** 2
+            updates.append((accumulator, new_accumulator))
+            new_param = param - lr * gradient / T.sqrt(new_accumulator + epsilon)
+            updates.append((param, new_param))
+
+        return updates
+
+    def dm_rmsprop(self, cost, params, lr=0.00025, rho=0.95, epsilon=0.01):
+        """
+        DeepMind RMSProp.
+        Scale learning rates by dividing with the moving average
+        of the root mean squared (RMS) gradients.
+        """
+        gradients = self.get_gradients(cost, params)
+        updates = OrderedDict()
+
+        for param, grad in zip(params, gradients):
+            value = param.get_value(borrow=True)
+
+            acc_grad = theano.shared(
+                np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
+            )
+            acc_grad_new = rho * acc_grad + (1 - rho) * grad
+
+            acc_rms = theano.shared(
+                np.zeros(value.shape, dtype=value.dtype), broadcastable=param.broadcastable
+            )
+            acc_rms_new = rho * acc_rms + (1 - rho) * grad ** 2
+
+            updates[acc_grad] = acc_grad_new
+            updates[acc_rms] = acc_rms_new
+
+            updates[param] = (param - lr *
+                              (grad /
+                               T.sqrt(acc_rms_new - acc_grad_new ** 2 + epsilon)))
+
         return updates
