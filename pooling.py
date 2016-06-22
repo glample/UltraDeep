@@ -1,21 +1,24 @@
 import theano.tensor as T
 import theano.sandbox.neighbours as TSN
-from theano.tensor.signal.downsample import max_pool_2d
+from theano.tensor.signal.pool import pool_2d
 
 
 class PoolLayer2D(object):
 
-    def __init__(self, pool_size):
+    def __init__(self, pool_size, stride, ignore_border=True, mode='max'):
         self.pool_size = pool_size
+        self.stride = stride
+        self.ignore_border = ignore_border
+        self.mode = mode
 
     def link(self, input):
-        return max_pool_2d(
+        return pool_2d(
             input=input,
             ds=(self.pool_size, self.pool_size),
-            ignore_border=True,
-            st=None,
+            ignore_border=self.ignore_border,
+            st=(self.stride, self.stride),
             padding=(0, 0),
-            mode='max'
+            mode=self.mode
         )
 
 
