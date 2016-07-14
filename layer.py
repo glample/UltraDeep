@@ -40,7 +40,7 @@ class HiddenLayer(object):
         )
 
         if activation == 'relu':
-            self.bias = create_shared(np.ones((output_dim,)), name + '__bias')
+            self.bias = create_shared(np.ones((output_dim,)) * 0.1, name + '__bias')
         else:
             self.bias = create_shared(np.zeros((output_dim,)), name + '__bias')
 
