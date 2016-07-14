@@ -44,12 +44,13 @@ class Experiment(object):
                             % component.name)
         self.components[component.name] = component
 
-    def dump(self, message):
+    def dump(self, message, model_name=""):
         """
         Write components values.
         """
         for name, component in self.components.items():
-            component_path = os.path.join(self.dump_path, "%s.mat" % (name))
+            component_name = "%s_%s.mat" % (model_name, name) if model_name else "%s.mat" % name
+            component_path = os.path.join(self.dump_path, component_name)
             if not hasattr(component, 'params'):
                 component_values = {component.name: component.get_value()}
             else:
@@ -63,12 +64,13 @@ class Experiment(object):
             )
         logger.info(message)
 
-    def load(self):
+    def load(self, model_name=""):
         """
         Load components values.
         """
         for name, component in self.components.items():
-            component_path = os.path.join(self.dump_path, "%s.mat" % (name))
+            component_name = "%s_%s.mat" % (model_name, name) if model_name else "%s.mat" % name
+            component_path = os.path.join(self.dump_path, component_name)
             component_values = scipy.io.loadmat(component_path)
             if not hasattr(component, 'params'):
                 param_value = component.get_value()
