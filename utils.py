@@ -33,11 +33,15 @@ def parse_experiment_name(s):
     parameters = OrderedDict()
     for p in s.split(','):
         splitted = p.split('=')
-        assert len(splitted) == 2
+        assert len(splitted) == 2, splitted
         if splitted[1] in ['True', 'False']:
             parameters[splitted[0]] = splitted[1] == 'True'
         elif splitted[1].isdigit():
             parameters[splitted[0]] = int(splitted[1])
+        elif splitted[1].replace('-', '', 1).isdigit():
+            parameters[splitted[0]] = int(splitted[1])
+        elif splitted[1].replace('-', '', 1).replace('.', '', 1).isdigit():
+            parameters[splitted[0]] = float(splitted[1])
         else:
             parameters[splitted[0]] = splitted[1]
     return parameters

@@ -2,7 +2,6 @@ import os
 import numpy as np
 import scipy.io
 from datetime import datetime
-import theano.tensor as T
 import utils
 import time
 import logging

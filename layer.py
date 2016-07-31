@@ -120,7 +120,7 @@ class DropoutLayer(object):
         p is the probability of dropping out a unit, so
         setting p to 0 is equivalent to have an identity layer.
         """
-        assert 0. <= p < 1.
+        assert 0. <= p < 1., p
         self.p = p
         self.rng = T.shared_randomstreams.RandomStreams(seed=123456)
         self.name = name
