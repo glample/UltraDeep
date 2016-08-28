@@ -20,11 +20,12 @@ class Experiment(object):
         """
         self.name = name
         self.start_time = datetime.now()
-        self.dump_path = os.path.join(dump_path, name)
+        self.dump_path = dump_path
+        self.experiment_path = os.path.join(dump_path, name)
         self.components = {}
-        if not os.path.exists(self.dump_path):
-            os.makedirs(self.dump_path)
-        self.logs_path = os.path.join(self.dump_path, "experiment.log")
+        if not os.path.exists(self.experiment_path):
+            os.makedirs(self.experiment_path)
+        self.logs_path = os.path.join(self.experiment_path, "experiment.log")
         if create_logger:
             self.log_formatter = utils.create_logger(self.logs_path)
 
@@ -49,7 +50,7 @@ class Experiment(object):
         """
         for name, component in self.components.items():
             component_name = "%s_%s.mat" % (model_name, name) if model_name else "%s.mat" % name
-            component_path = os.path.join(self.dump_path, component_name)
+            component_path = os.path.join(self.experiment_path, component_name)
             if not hasattr(component, 'params'):
                 component_values = {component.name: component.get_value()}
             else:
@@ -63,13 +64,14 @@ class Experiment(object):
             )
         logger.info(message)
 
-    def load(self, model_name=""):
+    def load(self, model_name="", experiment_name=""):
         """
         Load components values.
         """
+        experiment_path = os.path.join(self.dump_path, experiment_name) if experiment_name else self.experiment_path
         for name, component in self.components.items():
             component_name = "%s_%s.mat" % (model_name, name) if model_name else "%s.mat" % name
-            component_path = os.path.join(self.dump_path, component_name)
+            component_path = os.path.join(experiment_path, component_name)
             component_values = scipy.io.loadmat(component_path)
             if not hasattr(component, 'params'):
                 param_value = component.get_value()
