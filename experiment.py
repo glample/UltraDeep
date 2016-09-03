@@ -64,12 +64,13 @@ class Experiment(object):
             )
         logger.info(message)
 
-    def load(self, model_name="", experiment_name=""):
+    def load(self, model_name="", experiment_name="", skip_invalid=False):
         """
         Load components values.
         """
         experiment_path = os.path.join(self.dump_path, experiment_name) if experiment_name else self.experiment_path
         for name, component in self.components.items():
+            print('Reloading %s...' % name)
             component_name = "%s_%s.mat" % (model_name, name) if model_name else "%s.mat" % name
             component_path = os.path.join(experiment_path, component_name)
             component_values = scipy.io.loadmat(component_path)
@@ -80,7 +81,13 @@ class Experiment(object):
             else:
                 for param in component.params:
                     param_value = param.get_value()
-                    assert component_values[param.name].size == param_value.size, (param, component_values[param.name].shape, param_value.shape)
+                    if component_values[param.name].size != param_value.size:
+                        shape_message = 'Invalid component shape for %s: expected %s, but found %s' % (param, param_value.shape, component_values[param.name].shape)
+                        if skip_invalid:
+                            logger.warning(shape_message + ' - Skipping...')
+                            continue
+                        else:
+                            raise Exception(shape_message)
                     param.set_value(np.reshape(
                         component_values[param.name],
                         param_value.shape
