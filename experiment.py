@@ -70,7 +70,7 @@ class Experiment(object):
         """
         experiment_path = os.path.join(self.dump_path, experiment_name) if experiment_name else self.experiment_path
         for name, component in self.components.items():
-            print('Reloading %s...' % name)
+            logger.info('Reloading %s...' % name)
             component_name = "%s_%s.mat" % (model_name, name) if model_name else "%s.mat" % name
             component_path = os.path.join(experiment_path, component_name)
             component_values = scipy.io.loadmat(component_path)
